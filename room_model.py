@@ -34,11 +34,15 @@ class RoomModel:
         self.source_intensity = self.i_0 * 10 ** (source_intensity / 10)  # converted from dB to actual intensity value
         self._omega = 2 * np.pi * frequency
 
-        self._impedance_val_array = np.full((self.n_space, 2), (self._air_z0, self._air_speed))
+        # Dictionary for keeping track of impedant objects
+        self._object_dict = {}
+        # Array defining char. impedance and speed of sound in model, filled with values for air by default  
+        self._model_val_array = np.full((self.n_space, 2), (self._air_z0, self._air_speed))
 
         # simulation and plot parameters:
         self._t_arr = np.linspace(0, time_to_sim, n_time)
         self._x_arr = np.linspace(0, dist_to_observer, n_space)
+
 
     # private methods
     def _calc_coefs(self, Z_1: float, Z_2: float) -> tuple[float, float]:
@@ -47,32 +51,65 @@ class RoomModel:
         return R_i, T_i
 
     # public methods
-    def add_impedant_object(self, start: float, stop: float, char_impedance: float, density: float):
+    def add_impedant_object(self, name: str, start: float, end: float, char_impedance: float, density: float) -> None:
         """Add an object with a certain acoustic impedance. 
 
         Parameters
         ----------
+        name : str
+            Name of object. 
         start : float
-            Start point for object [m]
-        stop : float
-            Stop point for object [m]
+            Start location of object [m]
+        end : float
+            end location of object [m]
         char_impedance : float
             Characteristic impedance of object [PaS/m]
         density : float
             Density of object [kg/m^3]
         """
+        if name in self._object_dict: 
+            raise ValueError(f"{name} already an object in model.")
+
         start_pos_index = int(start / self.dist_to_observer * self.n_space)
-        stop_pos_index = int(stop / self.dist_to_observer * self.n_space)
+        end_pos_index = int(end / self.dist_to_observer * self.n_space) 
         sound_speed = char_impedance / density  # speed of sound in given medium [m/s]
 
-        for i in range(start_pos_index, stop_pos_index):
-            self._impedance_val_array[i][0] = char_impedance
-            self._impedance_val_array[i][1] = sound_speed
+        self._object_dict[name] = (start_pos_index, end_pos_index) 
 
-    def calc_intensity(self):
+        for i in range(start_pos_index, end_pos_index):
+            self._model_val_array[i][0] = char_impedance
+            self._model_val_array[i][1] = sound_speed
+
+    def remove_impedant_object(self, name: str) -> None: 
+        """Remove specified object from model. 
+
+        Parameters
+        ----------
+        name : str
+            Name of object.
+
+        Raises
+        ------
+        ValueError
+            If object is not in model. 
+        """
+
+        if name not in self._object_dict: 
+            raise ValueError(f"{name} is not an object in the model.")
+        
+        object_indeces = self._object_dict.pop(name)
+
+        start_pos_index = object_indeces[0]
+        end_pos_index = object_indeces[1]
+
+        self._model_val_array[start_pos_index:end_pos_index] = (self._air_z0, self._air_speed)
+        
+
+
+    def calc_intensity(self) -> None:
         """Simulate system."""
         wave_anal_sol = np.zeros((self.n_space, self.n_time))
-        imp_arr = self._impedance_val_array
+        imp_arr = self._model_val_array
         max_amplitude = self.source_intensity
         sound_speed = imp_arr[0][1]  # first value of speed as default
         wavenumber = self._omega / sound_speed
