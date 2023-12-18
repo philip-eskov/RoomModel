@@ -4,8 +4,8 @@ import matplotlib.animation as animation
 
 class RoomModel:
         
-    air_z0 = 420  # characteristic impedance of air [PaS/m]
-    air_speed = 343  # speed of sound in air [m/s]
+    _air_z0 = 420  # characteristic impedance of air [PaS/m]
+    _air_speed = 343  # speed of sound in air [m/s]
 
     def __init__(self, dist_to_observer: float, source_intensity: float, frequency: float, n_space: int = 50000, n_time: int = 2000, time_to_sim: float = 0.1):
         """
@@ -34,7 +34,7 @@ class RoomModel:
         self.source_intensity = self.i_0 * 10 ** (source_intensity / 10)  # converted from dB to actual intensity value
         self._omega = 2 * np.pi * frequency
 
-        self._impedance_val_array = np.full((self.n_space, 2), (self.air_z0, self.air_speed))
+        self._impedance_val_array = np.full((self.n_space, 2), (self._air_z0, self._air_speed))
 
         # simulation and plot parameters:
         self._t_arr = np.linspace(0, time_to_sim, n_time)
@@ -75,7 +75,7 @@ class RoomModel:
         imp_arr = self._impedance_val_array
         max_amplitude = self.source_intensity
         sound_speed = imp_arr[0][1]  # first value of speed as default
-        wavenumber = self.omega / sound_speed
+        wavenumber = self._omega / sound_speed
 
         for i in range(len(imp_arr) - 1):
             current_imp = imp_arr[i][0]
@@ -84,8 +84,8 @@ class RoomModel:
             if current_imp != next_imp:
               max_amplitude *= self._calc_coefs(current_imp, next_imp)[1]
               sound_speed = imp_arr[i + 1][1]
-              wavenumber = self.omega / sound_speed
-            wave_anal_sol[i, :] += max_amplitude * np.sin(wavenumber * self._x_arr[i] - self.omega * self._t_arr)
+              wavenumber = self._omega / sound_speed
+            wave_anal_sol[i, :] += max_amplitude * np.sin(wavenumber * self._x_arr[i] - self._omega * self._t_arr)
 
         # animation
         plt.style.use("dark_background")
