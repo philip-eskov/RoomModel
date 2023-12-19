@@ -110,10 +110,10 @@ class RoomModel:
         if name not in self._object_dict:
             raise ValueError(f"{name} is not an object in the model.")
 
-        object_indeces = self._object_dict.pop(name)
+        object_indices = self._object_dict.pop(name)
 
-        start_pos_index = object_indeces[0]
-        end_pos_index = object_indeces[1]
+        start_pos_index = object_indices[0]
+        end_pos_index = object_indices[1]
 
         self._model_val_array[start_pos_index:end_pos_index] = (
             self._air_z0,
@@ -123,18 +123,18 @@ class RoomModel:
     def calc_intensity(self) -> None:
         """Simulate system."""
         wave_anal_sol = np.zeros((self.n_space, self.n_time))
-        imp_arr = self._model_val_array
+        model_val_array = self._model_val_array
         max_amplitude = self.source_intensity
-        sound_speed = imp_arr[0][1]  # first value of speed as default
+        sound_speed = model_val_array[0][1]  # first value of speed as default
         wavenumber = self._omega / sound_speed
 
-        for i in range(len(imp_arr) - 1):
-            current_imp = imp_arr[i][0]
-            next_imp = imp_arr[i + 1][0]
+        for i in range(len(model_val_array) - 1):
+            current_imp = model_val_array[i][0]
+            next_imp = model_val_array[i + 1][0]
 
             if current_imp != next_imp:
                 max_amplitude *= self._calc_coefs(current_imp, next_imp)[1]
-                sound_speed = imp_arr[i + 1][1]
+                sound_speed = model_val_array[i + 1][1]
                 wavenumber = self._omega / sound_speed
             wave_anal_sol[i, :] += max_amplitude * np.sin(
                 wavenumber * self._x_arr[i] - self._omega * self._t_arr
