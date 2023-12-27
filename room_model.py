@@ -63,7 +63,7 @@ class RoomModel:
 
     # public methods
     def add_impedant_object(
-        self, name: str, start: float, end: float, char_impedance: float, density: float
+        self, name: str, start: float, end: float, z0: float, density: float
     ) -> None:
         """Add an object with a certain acoustic impedance.
 
@@ -75,7 +75,7 @@ class RoomModel:
             Start location of object [m]
         end : float
             end location of object [m]
-        char_impedance : float
+        z0 : float
             Characteristic impedance of object [PaS/m]
         density : float
             Density of object [kg/m^3]
@@ -85,13 +85,15 @@ class RoomModel:
 
         start_pos_index = int(start / self.dist_to_observer * self.n_space)
         end_pos_index = int(end / self.dist_to_observer * self.n_space)
-        sound_speed = char_impedance / density  # speed of sound in given medium [m/s]
+        sound_speed = z0 / density  # speed of sound in given medium [m/s]
 
         self._object_dict[name] = (start_pos_index, end_pos_index)
+        
+        self._model_val_array[start_pos_index:end_pos_index] = (
+            z0,
+            sound_speed,
+        )
 
-        for i in range(start_pos_index, end_pos_index):
-            self._model_val_array[i][0] = char_impedance
-            self._model_val_array[i][1] = sound_speed
 
     def remove_impedant_object(self, name: str) -> None:
         """Remove specified object from model.
@@ -151,9 +153,9 @@ class RoomModel:
                 self.source_intensity * 1.5,
             ]
         )
-        ax2.axis([0, self.dist_to_observer, 0, 100])
         (l,) = ax1.plot([], [])
 
+        ax2.axis([0, self.dist_to_observer, 0, 100])
         # Prepare the data for the max dB value plot
         max_intensity_db = 10 * np.log10(
             np.max(wave_anal_sol[:-1, :], axis=1) / self.i_0
