@@ -42,6 +42,10 @@ class RoomModel:
         self.source_intensity = self.i_0 * 10 ** (
             source_intensity / 10
         )  # converted from dB to actual intensity value
+
+        if frequency < 0: 
+            raise ValueError("Frequency cannot be negative.")
+        
         self._omega = 2 * np.pi * frequency
 
         # Dictionary for keeping track of impedant objects
