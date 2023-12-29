@@ -83,17 +83,20 @@ class RoomModel:
         if name in self._object_dict:
             raise ValueError(f"{name} already an object in model.")
 
+        # calculate indices of object in model array from start and end positions in meters
+
         start_pos_index = int(start / self.dist_to_observer * self.n_space)
         end_pos_index = int(end / self.dist_to_observer * self.n_space)
         sound_speed = z0 / density  # speed of sound in given medium [m/s]
 
         self._object_dict[name] = (start_pos_index, end_pos_index)
-        
+
+        # replace air values with object values
+
         self._model_val_array[start_pos_index:end_pos_index] = (
             z0,
             sound_speed,
         )
-
 
     def remove_impedant_object(self, name: str) -> None:
         """Remove specified object from model.
@@ -117,6 +120,8 @@ class RoomModel:
         start_pos_index = object_indices[0]
         end_pos_index = object_indices[1]
 
+        # replace object values with air values
+
         self._model_val_array[start_pos_index:end_pos_index] = (
             self._air_z0,
             self._air_speed,
@@ -124,20 +129,28 @@ class RoomModel:
 
     def calc_intensity(self) -> None:
         """Simulate system."""
-        wave_anal_sol = np.zeros((self.n_space, self.n_time))
+        wave_anal_sol = np.zeros(
+            (self.n_space, self.n_time)
+        )  # solution array for time and space
         model_val_array = self._model_val_array
+
+        # max amplitude of wave, initialized to source intensity and updated as wave propagates:
         max_amplitude = self.source_intensity
         sound_speed = model_val_array[0][1]  # first value of speed as default
         wavenumber = self._omega / sound_speed
+
+        # calculate wave amplitude at each point in space and time
 
         for i in range(len(model_val_array) - 1):
             current_imp = model_val_array[i][0]
             next_imp = model_val_array[i + 1][0]
 
+            # block to handle reflection and transmission at boundaries
             if current_imp != next_imp:
                 max_amplitude *= self._calc_coefs(current_imp, next_imp)[1]
                 sound_speed = model_val_array[i + 1][1]
                 wavenumber = self._omega / sound_speed
+
             wave_anal_sol[i, :] += max_amplitude * np.sin(
                 wavenumber * self._x_arr[i] - self._omega * self._t_arr
             )
